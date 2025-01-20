@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    ports:
+      - "9000:9000"
+    volumes:
+      - .:/var/www
+    networks:
+      - laravel_network
+    environment:
+      - APP_ENV=production
+      - APP_KEY=base64:your-app-key
+      - APP_DEBUG=false
+      - DB_HOST=db
+      - DB_DATABASE=your-database
+      - DB_USERNAME=your-username
+      - DB_PASSWORD=your-password
+
+  db:
+    image: mysql:8.0
+    container_name: laravel_db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: your-database
+      MYSQL_USER: your-username
+      MYSQL_PASSWORD: your-password
+    networks:
+      - laravel_network
+
+networks:
+  laravel_network:
+    driver: bridge
