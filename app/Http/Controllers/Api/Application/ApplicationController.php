@@ -20,7 +20,7 @@ class ApplicationController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api')->except(['initializePayment', 'verifyPayment', 'login', 'uploadPassport','uploadFirstSittingResult','uploadSecondSittingResult']);
+        $this->middleware('auth:api')->except(['initializePayment', 'verifyPayment', 'login', 'uploadPassport', 'uploadFirstSittingResult', 'uploadSecondSittingResult']);
     }
     public function initializePayment(Request $request)
     {
@@ -106,39 +106,39 @@ class ApplicationController extends Controller
             ], 500);
         }
     }
-    
-    
+
+
     public function verifyPayment()
     {
         $curl = curl_init();
         $reference = isset($_GET['transRef']) ? $_GET['transRef'] : '';
-        if(!$reference){
+        if (!$reference) {
             return response()->json([
                 'status' => 'Request Failed',
                 'message' => 'No Reference Provided'
-            ],422);
-        }else{
+            ], 422);
+        } else {
             curl_setopt_array($curl, array(
-              CURLOPT_URL => "https://api.credodemo.com/transaction/".$reference."/verify",
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_HTTPHEADER => [
-                "accept: application/json",
-                "authorization: 0PRI0558gYl7120yXtnI978CuwZYbDox",
-                "cache-control: no-cache"
-              ],
+                CURLOPT_URL => "https://api.credodemo.com/transaction/" . $reference . "/verify",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    "accept: application/json",
+                    "authorization: 0PRI0558gYl7120yXtnI978CuwZYbDox",
+                    "cache-control: no-cache"
+                ],
             ));
 
             $response = curl_exec($curl);
             $err = curl_error($curl);
 
-            if($err){
+            if ($err) {
                 // there was an error contacting the Paystack API
-              die('Curl returned error: ' . $err);
+                die('Curl returned error: ' . $err);
             }
 
             $callback = json_decode($response);
 
-            if(!$callback->status){
+            if (!$callback->status) {
                 // there was an error from the API
                 die('API returned error: ' . $callback->message);
             }
@@ -146,35 +146,35 @@ class ApplicationController extends Controller
             $email = $callback->data->customerId;
 
             $detail = ApplicationPayment::where(['reference' => $reference, 'email' => $email])->first();
-            if(!$detail){
+            if (!$detail) {
                 return response()->json([
                     'status' => 'Failed',
                     'message' => 'Transaction Details Not Found'
-                ],404);
+                ], 404);
             }
             $DBreference = $detail->reference;
 
             if ($DBreference == $reference && $status == 200) {
-                $updateDetail = ApplicationPayment::where(['reference' => $reference, 'email' => $email])->update(['application_payment_status'=>true]);
+                $updateDetail = ApplicationPayment::where(['reference' => $reference, 'email' => $email])->update(['application_payment_status' => true]);
                 PaymentLog::create([
                     'user_id' => $detail->id,
                     'payment_type' => 'Application Fee',
-                    'amount' => $this->getInsightTagValue('amount',$callback->data->metadata),
+                    'amount' => $this->getInsightTagValue('amount', $callback->data->metadata),
                     'reference' => $reference,
                     'status' => 'Paid'
                 ]);
                 $url = "https://google.com";
-                $password = $this->getInsightTagValue('password',$callback->data->metadata);
+                $password = $this->getInsightTagValue('password', $callback->data->metadata);
                 Mail::to($detail->email)->send(new WelcomeMail($detail, $password, $url));
                 return response()->json([
                     'status' => 'Successful',
                     'message' => 'Payment was successful'
-                ],200);
-            }else {
+                ], 200);
+            } else {
                 return response()->json([
                     'status' => 'Failed',
                     'message' => 'Failed to confirm Payment'
-                ],401);
+                ], 401);
             }
         }
     }
@@ -187,7 +187,7 @@ class ApplicationController extends Controller
         }
         $user = ApplicationPayment::where('reference', $request->reference)->first();
         $payment_status = $user->application_payment_status;
-        if($payment_status == false){
+        if ($payment_status == false) {
             return response()->json(['status' => 403, 'response' => 'Invalid Reference', 'message' => 'Unauthorized User'], 403);
         }
 
@@ -256,8 +256,8 @@ class ApplicationController extends Controller
                 'second_sitting' => $secondSitting,
                 'passport' => $request->image_url
             ]);
-            if($application_form){
-                ApplicationPayment::find(auth('api')->user()->id)->update(['is_applied'=>true]);
+            if ($application_form) {
+                ApplicationPayment::find(auth('api')->user()->id)->update(['is_applied' => true]);
                 return response()->json(['status' => 200, 'response' => 'Successful', 'message' => 'Application Form Submitted Successfully.', 'data' => $application_form]);
             }
         } catch (\Exception $e) {
@@ -265,8 +265,6 @@ class ApplicationController extends Controller
             Log::error('Error uploading application form: ' . $e->getMessage());
             return response()->json(['status' => 500, 'response' => 'Server Error', 'message' => 'Error Uploading Application Form.'], 500);
         }
-
-        
     }
     public function uploadPassport(Request $request)
     {
@@ -312,7 +310,7 @@ class ApplicationController extends Controller
         // Handle case where no file is provided
         return response()->json(['status' => 400, 'response' => 'Bad Request', 'message' => 'No passport file provided.'], 400);
     }
-    
+
     public function uploadSecondSittingResult(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -335,8 +333,8 @@ class ApplicationController extends Controller
         // Handle case where no file is provided
         return response()->json(['status' => 400, 'response' => 'Bad Request', 'message' => 'No passport file provided.'], 400);
     }
-    
-    
+
+
     private function uploadFile($file, $folder)
     {
         try {
@@ -360,7 +358,7 @@ class ApplicationController extends Controller
         }
 
         $user = ApplicationPayment::find(auth('api')->user()->id);
-        if($user->admission_status != 'admitted'){
+        if ($user->admission_status != 'admitted') {
             return response()->json(['status' => 422, 'response' => 'Unprocessable Content', 'message' => 'User has not been admiited'], 422);
         }
 
@@ -383,7 +381,7 @@ class ApplicationController extends Controller
                     'user_id' => $user->id,
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
-                    'payment_type'=>'Acceptance Fee Payment',
+                    'payment_type' => 'Acceptance Fee Payment',
                     'amount' => $request->amount,
                 ]
             ],
@@ -395,33 +393,33 @@ class ApplicationController extends Controller
     {
         $curl = curl_init();
         $reference = isset($_GET['transRef']) ? $_GET['transRef'] : '';
-        if(!$reference){
+        if (!$reference) {
             return response()->json([
                 'status' => 'Request Failed',
                 'message' => 'No Reference Provided'
-            ],422);
-        }else{
+            ], 422);
+        } else {
             curl_setopt_array($curl, array(
-              CURLOPT_URL => "https://api.credodemo.com/transaction/".$reference."/verify",
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_HTTPHEADER => [
-                "accept: application/json",
-                "authorization: 0PRI0558gYl7120yXtnI978CuwZYbDox",
-                "cache-control: no-cache"
-              ],
+                CURLOPT_URL => "https://api.credodemo.com/transaction/" . $reference . "/verify",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    "accept: application/json",
+                    "authorization: 0PRI0558gYl7120yXtnI978CuwZYbDox",
+                    "cache-control: no-cache"
+                ],
             ));
 
             $response = curl_exec($curl);
             $err = curl_error($curl);
 
-            if($err){
+            if ($err) {
                 // there was an error contacting the Paystack API
-              die('Curl returned error: ' . $err);
+                die('Curl returned error: ' . $err);
             }
 
             $callback = json_decode($response);
 
-            if(!$callback->status){
+            if (!$callback->status) {
                 // there was an error from the API
                 die('API returned error: ' . $callback->message);
             }
@@ -429,23 +427,23 @@ class ApplicationController extends Controller
             $email = $callback->data->customerId;
 
             if ($status == 200) {
-                $updateDetail = ApplicationPayment::where(['email' => $email])->update(['accpetance_fee_payment_status'=>true]);
+                $updateDetail = ApplicationPayment::where(['email' => $email])->update(['accpetance_fee_payment_status' => true]);
                 PaymentLog::create([
                     'user_id' => auth('api')->user()->id,
-                    'payment_type' => $this->getInsightTagValue('payment_type',$callback->data->metadata),
-                    'amount' => $this->getInsightTagValue('amount',$callback->data->metadata),
+                    'payment_type' => $this->getInsightTagValue('payment_type', $callback->data->metadata),
+                    'amount' => $this->getInsightTagValue('amount', $callback->data->metadata),
                     'reference' => $reference,
                     'status' => 'Paid'
                 ]);
                 return response()->json([
                     'status' => 'Successful',
                     'message' => 'Acceptance Fee Payment was successful'
-                ],200);
-            }else {
+                ], 200);
+            } else {
                 return response()->json([
                     'status' => 'Failed',
                     'message' => 'Failed to confirm Payment'
-                ],401);
+                ], 401);
             }
         }
     }
@@ -459,7 +457,7 @@ class ApplicationController extends Controller
         }
 
         $user = ApplicationPayment::find(auth('api')->user()->id);
-        if($user->accpetance_fee_payment_status != true){
+        if ($user->accpetance_fee_payment_status != true) {
             return response()->json(['status' => 422, 'response' => 'Unprocessable Content', 'message' => 'User needs to pay acceptance fee first'], 422);
         }
 
@@ -482,7 +480,7 @@ class ApplicationController extends Controller
                     'user_id' => $user->id,
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
-                    'payment_type'=>'Tuition Fee Payment',
+                    'payment_type' => 'Tuition Fee Payment',
                     'amount' => $request->amount,
                 ]
             ],
@@ -500,7 +498,7 @@ class ApplicationController extends Controller
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
-        return response()->json(['status' => 200,'response' => $user->last_name.' '.$user->first_name.` fetched successfully`,'user' => $user], 200);
+        return response()->json(['status' => 200, 'response' => $user->last_name . ' ' . $user->first_name . ` fetched successfully`, 'user' => $user], 200);
     }
 
     public function applicationData(Request $request)
@@ -529,33 +527,33 @@ class ApplicationController extends Controller
     {
         $curl = curl_init();
         $reference = isset($_GET['transRef']) ? $_GET['transRef'] : '';
-        if(!$reference){
+        if (!$reference) {
             return response()->json([
                 'status' => 'Request Failed',
                 'message' => 'No Reference Provided'
-            ],422);
-        }else{
+            ], 422);
+        } else {
             curl_setopt_array($curl, array(
-              CURLOPT_URL => "https://api.credodemo.com/transaction/".$reference."/verify",
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_HTTPHEADER => [
-                "accept: application/json",
-                "authorization: 0PRI0558gYl7120yXtnI978CuwZYbDox",
-                "cache-control: no-cache"
-              ],
+                CURLOPT_URL => "https://api.credodemo.com/transaction/" . $reference . "/verify",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    "accept: application/json",
+                    "authorization: 0PRI0558gYl7120yXtnI978CuwZYbDox",
+                    "cache-control: no-cache"
+                ],
             ));
 
             $response = curl_exec($curl);
             $err = curl_error($curl);
 
-            if($err){
+            if ($err) {
                 // there was an error contacting the Paystack API
-              die('Curl returned error: ' . $err);
+                die('Curl returned error: ' . $err);
             }
 
             $callback = json_decode($response);
 
-            if(!$callback->status){
+            if (!$callback->status) {
                 // there was an error from the API
                 die('API returned error: ' . $callback->message);
             }
@@ -565,10 +563,10 @@ class ApplicationController extends Controller
             if ($status == 200) {
                 /*$reg_number = Carbon::now()->format('Y').'345'.rand(1, 999);
                 $updateDetail = ApplicationPayment::where(['email' => $email])->update(['tuition_payment_status'=>true,'reg_number' => $reg_number]);*/
-                
+
                 try {
                     do {
-                        $reg_number = Carbon::now()->format('Y').'345'.rand(1, 999);
+                        $reg_number = Carbon::now()->format('Y') . '345' . rand(1, 999);
                         // Attempt to update
                         $updateDetail = ApplicationPayment::where(['reference' => auth('api')->user()->reference])
                             ->update(['tuition_payment_status' => true, 'reg_number' => $reg_number]);
@@ -588,20 +586,20 @@ class ApplicationController extends Controller
 
                 PaymentLog::create([
                     'user_id' => auth('api')->user()->id,
-                    'payment_type' => $this->getInsightTagValue('payment_type',$callback->data->metadata),
-                    'amount' => $this->getInsightTagValue('amount',$callback->data->metadata),
+                    'payment_type' => $this->getInsightTagValue('payment_type', $callback->data->metadata),
+                    'amount' => $this->getInsightTagValue('amount', $callback->data->metadata),
                     'reference' => $reference,
                     'status' => 'Paid'
                 ]);
                 return response()->json([
                     'status' => 'Successful',
                     'message' => 'Tuition Fee Payment was successful'
-                ],200);
-            }else {
+                ], 200);
+            } else {
                 return response()->json([
                     'status' => 'Failed',
                     'message' => 'Failed to confirm Payment'
-                ],401);
+                ], 401);
             }
         }
     }
